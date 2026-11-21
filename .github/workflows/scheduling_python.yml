@@ -4,7 +4,8 @@ name: Executar Script Python Diário
 on:
   schedule:
     # 12:00 UTC corresponde às 09:00 no Horário de Brasília (UTC-3)
-    - cron: '0 12 * * *'
+    # cron: 'min(0-59) hora(0-23) dia/mes(1-31) mes dia/semana(0-6)'
+    - cron: '17 17 * * *' # Configurado para 10h17 Horário de Brasilia
   
   # Permite que você force a execução manual pelo painel do GitHub se precisar testar
   workflow_dispatch:
@@ -45,6 +46,8 @@ jobs:
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY}}
         URL_GREEN_API: ${{ secrets.URL_GREEN_API}}
         CHAT_ID: ${{ secrets.CHAT_ID}}
+        BOT_API_KEY: ${{ secrets.BOT_API_KEY}}
+        ZAP_ID: ${{ secrets.ZAP_ID}}
       run: python src/news_automation.py # arquivo .py
 
     # Salva o historico atualizado de volta na nuvem

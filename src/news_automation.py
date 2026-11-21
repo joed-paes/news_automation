@@ -1,6 +1,7 @@
 # Packages
-import os
+import os, sys
 import requests
+import urllib.parse as url_parse
 from bs4 import BeautifulSoup
 from groq import Groq
 
@@ -9,6 +10,8 @@ NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 URL_GREEN_API = os.environ.get('URL_GREEN_API')
 CHAT_ID = os.environ.get('CHAT_ID')
+BOT_API_KEY = os.environ.get('BOT_API_KEY')
+ZAP_ID = os.environ.get('ZAP_ID')
 
 # Arquivo com notícias já enviadas
 ARQUIVO_HISTORICO = 'historico_noticias.txt'
@@ -115,7 +118,8 @@ def buscar_e_resumir_noticias():
         
     # Carrega o histórico de links já enviados
     urls_enviadas = carregar_historico()
-    
+
+    mensagens = []
     mensagem = "*🤖 Resumo Inteligente de IA 🤖*\n\n"
     contagem_novas = 0
     
@@ -146,40 +150,60 @@ def buscar_e_resumir_noticias():
         mensagem += f"*{contagem_novas}. {titulo}*\n"
         mensagem += f"🏢 _Fonte: {fonte_nome}_\n"
         mensagem += f"📝 _{resumo}_\n"
-        mensagem += f"🔗 {url_artigo}\n\n"
-        
+        mensagem += f"🔗 {url_artigo}\n"
+
+        mensagens.append(mensagem)
+        mensagem = ''
+
         # Grava a URL no histórico para não repetir nas próximas execuções
         salvar_no_historico(url_artigo)
         
     # Se nenhuma notícia nova foi encontrada no lote
     if contagem_novas == 0:
         print("Sua lista está atualizada! Nenhuma notícia inédita nas últimas horas.")
-        return None
+        mensagens.append("*🤖 Resumo Inteligente de IA 🤖*\n\n Nenhuma notícia inédita no último dia!")
+        return mensagens
         
-    return mensagem
+    return mensagens
+
+def enviar_whatsapp_green(conteudo):
+    """Dispara a mensagem final para o WhatsApp."""
+    if not conteudo:
+        return
+
+    for conteudo_i in conteudo:
+        try:
+            url = URL_GREEN_API
+
+            payload = {
+                "chatId": CHAT_ID, 
+                "message": conteudo_i, 
+                "typingTime": "1000", 
+                "linkPreview": False
+            }
+            headers = {
+            'Content-Type': 'application/json'
+            }
+            
+            response = requests.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            print("🚀 Relatório enviado sem repetições!")
+        except Exception as e:
+            print(f"❌ Erro ao enviar mensagem: {str(e)}")
 
 def enviar_whatsapp(conteudo):
     """Dispara a mensagem final para o WhatsApp."""
     if not conteudo:
         return
-    try:
-        url = URL_GREEN_API
-
-        payload = {
-            "chatId": CHAT_ID, 
-            "message": relatorio_noticias, 
-            "typingTime": "1000", 
-            "linkPreview": False
-        }
-        headers = {
-        'Content-Type': 'application/json'
-        }
-        
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        print("🚀 Relatório enviado sem repetições!")
-    except Exception as e:
-        print(f"❌ Erro ao enviar mensagem: {str(e)}")
+    for conteudo_i in conteudo:
+        try:
+            conteudo_parsed = url_parse.quote(conteudo_i)
+            url = f"https://api.callmebot.com/whatsapp.php?phone={ZAP_ID}&text={conteudo_parsed}&apikey={BOT_API_KEY}"
+            response = requests.post(url)
+            response.raise_for_status()
+            print("🚀 Relatório enviado sem repetições!")
+        except Exception as e:
+            print(f"❌ Erro ao enviar mensagem: {str(e)}")
 
 
 if __name__ == "__main__":
